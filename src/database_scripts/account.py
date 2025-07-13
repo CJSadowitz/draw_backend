@@ -59,14 +59,57 @@ async def login(packet):
     finally:
         await conn.close()
         
+# Received:
+#{
+#   "username": text,
+#   "password": hash,
+#   "version": hash,
+#}
 
-def create_account(packet):
-    pass
+# Returned:
+#{
+#   "success": 200
+#}
+# Or:
+#{
+#   "error": 409
+#}
+async def create_account(packet):
+    packet = json.loads(packet)
+    username = packet["username"]
+    password = packet["password"]
+    version  = packet["version"]
+    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
+    try:
+        cursor = conn.cursor()
+        # Check if username is already taken
+        await cursor.execute("SELECT username FROM Player WHERE username=%s", (username,))
+        data = await cursor.fetchall()
+        if data != []:
+            return { "error": 403 }
+
+        # Add user
+        try:
+            await cursor.execute("""
+                INSERT INTO Player (username, password, uvid, status) VALUES (%s, %s, %s, %s)
+                """, 
+                (username, password, version, "offline")
+            )
+        except psycopg.Error as e:
+            return { "error": 500 }
+        
+        finally:
+            return { "success": 200 }
+
+    finally:
+        await conn.commit()
+        await conn.close()
 
 if __name__ == "__main__":
     packet = {}
-    packet["version"] = "f"
+    packet["username"] = "calla"
+    packet["password"] = "password"
+    packet["version"] = "hash"
     json_packet = json.dumps(packet)
-    print (asyncio.run(check_version(json_packet)))
-
+    print (asyncio.run(create_account(json_packet)))
    

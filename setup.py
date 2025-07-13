@@ -5,11 +5,13 @@ async def setup_tables():
     conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
     try:
         cursor = conn.cursor()
-        
+       
+        await conn.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+
         # Versions
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS Versions (
-                uvid TEXT PRIMARY KEY NOT NULL UNIQUE,
+                uvid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
                 type TEXT NOT NULL
                 );
         """)
@@ -17,7 +19,7 @@ async def setup_tables():
         # Player
         await cursor.execute("""
             CREATE TABLE IF NOT EXISTS Player (
-                uuid TEXT PRIMARY KEY NOT NULL UNIQUE,
+                uuid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
                 uvid TEXT NOT NULL,
                 username TEXT NOT NULL,
                 password TEXT NOT NULL,
@@ -29,7 +31,7 @@ async def setup_tables():
         # Lobbies
         await cursor.execute("""
             CREATE TABLE IF NOT EXISTS Lobbies (
-                ulid TEXT PRIMARY KEY NOT NULL UNIQUE,
+                ulid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
                 ugid TEXT,
                 uvid TEXT NOT NULL,
                 status TEXT NOT NULL,
@@ -49,7 +51,7 @@ async def setup_tables():
         # Game
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS Game (
-                ugid TEXT PRIMARY KEY NOT NULL UNIQUE,
+                ugid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
                 ulid TEXT NOT NULL,
                 turn int NOT NULL,
                 direction TEXT NOT NULL,
@@ -62,7 +64,7 @@ async def setup_tables():
         # Moves
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS Moves (
-                umid TEXT PRIMARY KEY NOT NULL UNIQUE,
+                umid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
                 ugid TEXT NOT NULL,
                 uuid TEXT NOT NULL,
                 turn_number int NOT NULL,
