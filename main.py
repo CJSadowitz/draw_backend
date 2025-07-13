@@ -1,19 +1,17 @@
-from flask import Flask, request
-from flask_cors import CORS
+import socket
+import threading
+from src.client_handler import handle_client
 
-from routes.lobbies import lobbies_bp
-from routes.game import game_bp
-from routes.statistics import statistics_bp
-from routes.account import account_bp
+def main():
+    address = ("", 8008)
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-app = Flask(__name__)
-CORS(app)
-
-app.register_blueprint(lobbies_bp)
-app.register_blueprint(game_bp)
-app.register_blueprint(statistics_bp)
-app.register_blueprint(account_bp)
+    server.bind(address)
+    server.listen(10)
+    while True:
+        connection, address = server.accept()
+        client_handler = threading.thread(target=handle_client, args=(connection,))
+        client_handler.start() 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8008)
-
+    main()
