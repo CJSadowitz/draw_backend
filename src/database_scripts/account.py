@@ -35,8 +35,30 @@ async def check_version(packet):
     finally:
         await conn.close()
 
-def login(packet):
-    pass
+# Received:
+#{
+#   "username": username,
+#   "password": hash
+#}
+
+# Returned:
+#{
+#   "token": hash
+#}
+
+async def login(packet):
+    packet = json.loads(packet)
+    username = packet["username"]
+    password = packet["password"]
+    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=player")
+    try:
+        cursor = conn.cursor()
+        await cursor.execute("SELECT uuid FROM Players WHERE username = %s AND password = %s", (username, password))
+        data = cursor.fetchall()
+
+    finally:
+        await conn.close()
+        
 
 def create_account(packet):
     pass
