@@ -8,6 +8,8 @@ async def setup_tables():
        
         await conn.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
 
+        await conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA public TO player")
+
         # Versions
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS Versions (
