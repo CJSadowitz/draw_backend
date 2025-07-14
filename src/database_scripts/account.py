@@ -24,13 +24,13 @@ async def check_version(packet):
     try:
         cursor = conn.cursor()
         await cursor.execute("SELECT version FROM Versions WHERE status>=0")
-        data = await cursor.fetchall()
-        for item in data:
+        row = await cursor.fetchall()
+        for item in row:
             if version == item[0]:
                 return json.dumps({ "success": 200 })
         await cursor.execute("SELECT version FROM Versions WHERE status=1")
-        data = await cursor.fetchone()
-        return json.dumps({ "version": data[0] })
+        row = await cursor.fetchone()
+        return json.dumps({ "version": row[0] })
 
     finally:
         await conn.close()
@@ -117,11 +117,75 @@ async def create_account(packet):
                 """, 
                 (username, password, version, "offline")
             )
+            return { "success": 200 }
         except psycopg.Error as e:
             return { "error": 500 }
+
+    finally:
+        await conn.commit()
+        await conn.close()
+
+# Request:
+#{
+#   "guest": "login",
+#   "version": "hash"
+#}
+
+# Return:
+#{
+#   "token": "token"
+#}
+
+async def guest_login(packet):
+    version = packet["version"]
+    conn =  await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
+    try:
+        cursor = conn.cursor()
         
-        finally:
+        # Generate token
+        await cursor.execute("SELECT gen_random_uuid()")
+        row = await cursor.fetchone()
+        token = row[0]
+
+        # Generate password
+        await cursor.execute("SELECT gen_random_uuid()")
+        row = await cursor.fetchone()
+        password = row[0]
+
+        await cursor.execute("""
+                INSERT INTO Player (username, password, uvid, status, token) VALUES (%s, %s, %s, %s, %s)
+                """, 
+                ("guest", password, version, "active", token)
+            )
+    finally:
+        conn.close()
+
+# Request:
+#{
+#   "logout": "token"
+#}
+
+# Return:
+#{
+#   "success": 200
+#}
+
+async def logout(packet):
+    token = packet["logoout"]
+    conn = await psykcokpg.AsyncConnection.connect("dbname=draw_master user=admin")
+    try:
+        cursor = conn.cursor()
+        # Check if token is associated with a guest
+        await cursor.execute("SELECT username FROM Player WHERE toekn=%s", (token,))
+        row = await cursor.fetchone()
+        if row[0] != "guest":
+            # Set to offline remove token
+            await cursor.execute("UPDATE Player SET status=%s WHERE token=%s", ("offline", None))
             return { "success": 200 }
+
+        # Delete guest from database
+        await cursor.execute("DELETE FROM Player WHERE token=%s AND username=%s", (token, "guest"))
+        return { "success": 200 }
 
     finally:
         await conn.commit()

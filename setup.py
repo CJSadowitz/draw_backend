@@ -26,7 +26,7 @@ async def setup_tables():
                 username TEXT NOT NULL,
                 password TEXT NOT NULL,
                 status TEXT NOT NULL,
-                token TEXT
+                token TEXT UNIQUE,
                 );
         """)
        
