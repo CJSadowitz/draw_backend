@@ -20,18 +20,22 @@ import json
 async def check_version(packet):
     packet = json.loads(packet)
     version = packet["version"]
-    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=colin")
+    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
 
     try:
         cursor = conn.cursor()
-        await cursor.execute("SELECT version FROM Version WHERE status>=0")
+        await cursor.execute("SELECT uvid FROM Version WHERE status>=0")
         row = await cursor.fetchall()
         for item in row:
             if version == item[0]:
                 return json.dumps({ "success": 200 })
-        await cursor.execute("SELECT version FROM Version WHERE status=1")
-        row = await cursor.fetchone()
-        return json.dumps({ "version": row[0] })
+        try:
+            await cursor.execute("SELECT uvid FROM Version WHERE status=1")
+            row = await cursor.fetchone()
+            return { "version": row[0] }
+        
+        except Exception as e:
+            return { "error": 500 }
 
     finally:
         await conn.close()
@@ -59,7 +63,6 @@ async def login(packet):
     conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
     try:
         cursor = conn.cursor()
-
         # Verify user's existance
         await cursor.execute("SELECT uuid, token FROM Player WHERE username = %s AND password = %s", (username, password))
         row = await cursor.fetchone()
@@ -74,7 +77,7 @@ async def login(packet):
         data = await cursor.fetchone()
         token = data[0]
 
-        await cursor.execute("UPDATE Player SET token=%s, status=%s WHERE uuid=%s", (token, "active", row[0]))
+        await cursor.execute("UPDATE Player SET token=%s, status=%s WHERE uuid=%s", (token, "online", row[0]))
         await conn.commit()
 
         return { "token": token }
@@ -121,6 +124,7 @@ async def create_account(packet):
                 (username, password, version, "offline")
             )
             return { "success": 200 }
+
         except psycopg.Error as e:
             return { "error": 500 }
 
