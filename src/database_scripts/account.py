@@ -158,7 +158,7 @@ async def guest_login(packet):
         await cursor.execute("""
                 INSERT INTO Player (username, password, uvid, status, token) VALUES (%s, %s, %s, %s, %s)
                 """, 
-                ("guest", password, version, "active", token)
+                ("", password, version, "active", token)
             )
     finally:
         conn.close()
