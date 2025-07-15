@@ -10,9 +10,9 @@ async def setup_tables():
 
         await conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA public TO player")
 
-        # Versions
+        # Version
         await conn.execute("""
-            CREATE TABLE IF NOT EXISTS Versions (
+            CREATE TABLE IF NOT EXISTS Version (
                 uvid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
                 type TEXT NOT NULL
                 );
@@ -26,27 +26,29 @@ async def setup_tables():
                 username TEXT NOT NULL,
                 password TEXT NOT NULL,
                 status TEXT NOT NULL,
-                token TEXT UNIQUE,
+                token TEXT UNIQUE
                 );
         """)
        
-        # Lobbies
+        # Lobby
         await cursor.execute("""
-            CREATE TABLE IF NOT EXISTS Lobbies (
+            CREATE TABLE IF NOT EXISTS Lobby (
                 ulid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
                 ugid TEXT,
                 uvid TEXT NOT NULL,
                 status TEXT NOT NULL,
                 type TEXT NOT NULL,
-                size int NOT NULL,
-                uuid1 TEXT,
-                uuid2 TEXT,
-                uuid3 TEXT,
-                uuid4 TEXT,
-                uuid5 TEXT,
-                uuid6 TEXT,
-                uuid7 TEXT,
-                uuid8 TEXT
+                size int NOT NULL
+                );
+        """)
+
+        # Lobby Members
+        await cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Lobby_member (
+                ulmid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+                ulid TEXT NOT NULL,
+                uuid TEXT NOT NULL,
+                slot_number int NOT NULL
                 );
         """)
        
@@ -55,12 +57,30 @@ async def setup_tables():
             CREATE TABLE IF NOT EXISTS Game (
                 ugid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
                 ulid TEXT NOT NULL,
-                turn int NOT NULL,
-                direction TEXT NOT NULL,
                 seed TEXT NOT NULL,
-                start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-                end_time TIMESTAMP WITH TIME ZONE
+                start_time TIMESTAMP NOT NULL,
+                end_time TIMESTAMP
                 );
+        """)
+
+        # Initial_game_order
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS Initial_game_order (
+                uigoid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+                ugid TEXT NOT NULL,
+                uuid TEXT NOT NULL,
+                position int NOT NULL
+            );
+        """)
+
+        # Game Leaderboard
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS Game_leaderboard (
+                uglid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+                ugid TEXT NOT NULL,
+                uuid TEXT NOT NULL,
+                podium_position TEXT NOT NULL
+            );
         """)
        
         # Moves
@@ -87,75 +107,66 @@ async def add_foreign_keys():
         await conn.execute("""
             ALTER TABLE Player
             ADD CONSTRAINT fk_player_versions
-            FOREIGN KEY (uvid) REFERENCES Versions(uvid)
+            FOREIGN KEY (uvid) REFERENCES Version(uvid)
         """)
 
-        # Lobbies FK
+        # Lobby FK
         await conn.execute("""
-            ALTER TABLE Lobbies
+            ALTER TABLE Lobby
             ADD CONSTRAINT fk_lobby_game
             FOREIGN KEY (ugid) REFERENCES Game(ugid);
         """)
 
         await conn.execute("""
-            ALTER TABLE Lobbies
+            ALTER TABLE Lobby
             ADD CONSTRAINT fk_lobby_version
-            FOREIGN KEY (uvid) REFERENCES Versions(uvid);
+            FOREIGN KEY (uvid) REFERENCES Version(uvid);
+        """)
+
+        # Lobby_members FK
+        await conn.execute("""
+            ALTER TABLE Lobby_member
+            ADD CONSTRAINT fk_lobbymember_lobby
+            FOREIGN KEY (ulid) REFERENCES Lobby(ulid)
         """)
 
         await conn.execute("""
-            ALTER TABLE Lobbies
-            ADD CONSTRAINT fk_lobby_player1
-            FOREIGN KEY (uuid1) REFERENCES Player(uuid);
-        """)
-
-        await conn.execute("""
-            ALTER TABLE Lobbies
-            ADD CONSTRAINT fk_lobby_player2
-            FOREIGN KEY (uuid2) REFERENCES Player(uuid);
-        """)
-
-        await conn.execute("""
-            ALTER TABLE Lobbies
-            ADD CONSTRAINT fk_lobby_player3
-            FOREIGN KEY (uuid3) REFERENCES Player(uuid);
-        """)
-
-        await conn.execute("""
-            ALTER TABLE Lobbies
-            ADD CONSTRAINT fk_lobby_player4
-            FOREIGN KEY (uuid4) REFERENCES Player(uuid);
-        """)
-
-        await conn.execute("""
-            ALTER TABLE Lobbies
-            ADD CONSTRAINT fk_lobby_player5
-            FOREIGN KEY (uuid5) REFERENCES Player(uuid);
-        """)
-
-        await conn.execute("""
-            ALTER TABLE Lobbies
-            ADD CONSTRAINT fk_lobby_player6
-            FOREIGN KEY (uuid6) REFERENCES Player(uuid);
-        """)
-
-        await conn.execute("""
-            ALTER TABLE Lobbies
-            ADD CONSTRAINT fk_lobby_player7
-            FOREIGN KEY (uuid7) REFERENCES Player(uuid);
-        """)
-
-        await conn.execute("""
-            ALTER TABLE Lobbies
-            ADD CONSTRAINT fk_lobby_player8
-            FOREIGN KEY (uuid8) REFERENCES Player(uuid);
+            ALTER TABLE Lobby_member
+            ADD CONSTRAINT fk_lobbymemeber_player
+            FOREIGN KEY (uuid) REFERENCES Player(uuid)
         """)
 
         # Game FK
         await conn.execute("""
             ALTER TABLE Game
             ADD CONSTRAINT fk_game_lobby
-            FOREIGN KEY (ulid) REFERENCES Lobbies(ulid)
+            FOREIGN KEY (ulid) REFERENCES Lobby(ulid)
+        """)
+
+        # Game_inital_position FK
+        await conn.execute("""
+            ALTER TABLE Initial_game_order
+            ADD CONSTRAINT fk_gameinitialposition_game
+            FOREIGN KEY (ugid) REFERENCES Game(ugid)
+        """)
+
+        await conn.execute("""
+            ALTER TABLE Initial_game_order
+            ADD CONSTRAINT fk_gameinitialpositions_player
+            FOREIGN KEY (uuid) REFERENCES Player(uuid)
+        """)
+
+        # Game_leaderboard FK
+        await conn.execute("""
+            ALTER TABLE Game_leaderboard
+            ADD CONSTRAINT fk_gameleaderboard_game
+            FOREIGN KEY (ugid) REFERENCES Game(ugid)
+        """)
+
+        await conn.execute("""
+            ALTER TABLE Game_leaderboard
+            ADD CONSTRAINT fk_gameleaderboard_player
+            FOREIGN KEY (uuid) REFERENCES Player(uuid)
         """)
 
         # Move FK
