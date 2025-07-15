@@ -14,7 +14,7 @@ async def setup_tables():
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS Version (
                 uvid TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-                type TEXT NOT NULL
+                status int NOT NULL
                 );
         """)
         
