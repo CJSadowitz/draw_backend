@@ -2,9 +2,10 @@ import psycopg
 import asyncio
 import json
 
-# Recieved:
+# Received:
 #{
-#   "version": hash
+#   "path": "account/version",
+#   "version": "hash"
 #}
 
 # Returned:
@@ -13,7 +14,7 @@ import json
 #}
 # Or:
 #{
-#   "version": hash
+#   "version": "hash"
 #}
 
 async def check_version(packet):
@@ -37,8 +38,9 @@ async def check_version(packet):
 
 # Received:
 #{
-#   "username": username,
-#   "password": hash
+#   "path": "account/login",
+#   "username": "username",
+#   "password": "hash"
 #}
 
 # Returned:
@@ -82,6 +84,7 @@ async def login(packet):
         
 # Received:
 #{
+#   "path": "account/create_account",
 #   "username": text,
 #   "password": hash,
 #   "version": hash,
@@ -127,7 +130,7 @@ async def create_account(packet):
 
 # Request:
 #{
-#   "guest": "login",
+#   "path": "account/guest",
 #   "version": "hash"
 #}
 
@@ -162,6 +165,7 @@ async def guest_login(packet):
 
 # Request:
 #{
+#   "path": "account/logout",
 #   "logout": "token"
 #}
 
@@ -176,7 +180,7 @@ async def logout(packet):
     try:
         cursor = conn.cursor()
         # Check if token is associated with a guest
-        await cursor.execute("SELECT username FROM Player WHERE toekn=%s", (token,))
+        await cursor.execute("SELECT username FROM Player WHERE token=%s", (token,))
         row = await cursor.fetchone()
         if row[0] != "guest":
             # Set to offline remove token

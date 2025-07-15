@@ -37,18 +37,15 @@ SERVER HANDSHAKE PACKETS
 
 user can press three buttons
 - "log in" -> goes to **MS-LOGIN**
-- End Point -> url/account/login
 ```SQL
 SELECT username, password FROM player WHERE username='input' AND password='input';
 ```
 To verify user info
 - "new account" -> goes to **MS-NEW-ACCOUNT**
-- End Point -> url/account/create_account
 ```SQL
 INSERT INTO player username, password VALUES(input, input);
 ```
 - "play anonymously" -> goes to **MS-ANON-ACCOUNT**
-- End Point url/account/guest_account
 ```SQL
 INSERT INTO player username, password VALUES(guestx, hash);
 ```
@@ -251,7 +248,6 @@ UPDATE Lobby SET PUID=input WHERE ULID=input;
 
 *Lobby leave request*
 - the user wants to leave their current lobby
-- End Point url/lobby/leave
 GET REQUEST -> No explicit packet
 
 *Lobby leave success* response
