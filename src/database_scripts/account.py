@@ -24,12 +24,12 @@ async def check_version(packet):
 
     try:
         cursor = conn.cursor()
-        await cursor.execute("SELECT version FROM Versions WHERE status>=0")
+        await cursor.execute("SELECT version FROM Version WHERE status>=0")
         row = await cursor.fetchall()
         for item in row:
             if version == item[0]:
                 return json.dumps({ "success": 200 })
-        await cursor.execute("SELECT version FROM Versions WHERE status=1")
+        await cursor.execute("SELECT version FROM Version WHERE status=1")
         row = await cursor.fetchone()
         return json.dumps({ "version": row[0] })
 
@@ -195,10 +195,3 @@ async def logout(packet):
         await conn.commit()
         await conn.close()
 
-if __name__ == "__main__":
-    packet = {}
-    packet["username"] = "callawn"
-    packet["password"] = "password"
-    json_packet = json.dumps(packet)
-    print (asyncio.run(login(json_packet)))
-   
