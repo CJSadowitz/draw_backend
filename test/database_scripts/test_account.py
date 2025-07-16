@@ -19,8 +19,10 @@ class test_account_request_response(unittest.IsolatedAsyncioTestCase):
             cursor = conn.cursor()
 
             try:
+                # If check fails, this ensures that it can run again to test fixes"
                 await cursor.execute("DELETE FROM version WHERE uvid=%s", ("fake_version",))
                 await conn.commit()
+
             except Exception as e:
                 pass
 
@@ -46,6 +48,10 @@ class test_account_request_response(unittest.IsolatedAsyncioTestCase):
             await conn.commit()
             await conn.close()
 
+        result = await check_version(json.dumps(packet))
+
+        # Hard to test which version exactly is return because it changes based on state of db
+        self.assertNotEqual(result, '{"success":200}')
 
     def test_login(self):
         pass
