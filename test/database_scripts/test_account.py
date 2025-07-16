@@ -189,8 +189,40 @@ class test_account_request_response(unittest.IsolatedAsyncioTestCase):
             await conn.close()
         await remove_testing_version(version)
 
-    async def guest_logout(self):
-        pass
+    async def test_guest_logout(self):
+        version = "guest_logout"
+
+        # Guard for errors
+        conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
+        try:
+            cursor = conn.cursor()
+            await cursor.execute("DELETE FROM Player WHERE uvid=%s",(version,))
+
+        finally:
+            await conn.commit()
+            await conn.close()
+
+        await create_testing_version(version)
+
+        packet = { "version": version }
+        response = await guest_login(json.dumps(packet))
+        token = response["token"]
+
+        packet = { "token": token }
+        result = await logout(json.dumps(packet))
+
+        self.assertEqual(result, { "success": 200 })
+       
+        conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
+        try:
+            cursor = conn.cursor()
+            await cursor.execute("DELETE FROM Player WHERE uvid=%s",(version,))
+
+        finally:
+            await conn.commit()
+            await conn.close()
+
+        await remove_testing_version(version)
 
 async def create_testing_version(version):
     conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
