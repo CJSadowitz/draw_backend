@@ -20,8 +20,8 @@ import json
 async def check_version(packet):
     packet = json.loads(packet)
     version = packet["version"]
-    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
 
+    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
     try:
         cursor = conn.cursor()
         await cursor.execute("SELECT uvid FROM Version WHERE status>=0")
@@ -66,7 +66,7 @@ async def login(packet):
         # Verify user's existance
         await cursor.execute("SELECT uuid, token FROM Player WHERE username = %s AND password = %s", (username, password))
         row = await cursor.fetchone()
-        if row == []:
+        if row == None:
             return { "error": 404 }
 
         # User already has a token; someone else logged in? 
@@ -80,7 +80,7 @@ async def login(packet):
         await cursor.execute("UPDATE Player SET token=%s, status=%s WHERE uuid=%s", (token, "online", row[0]))
         await conn.commit()
 
-        return { "token": token }
+        return { "token": str(token) }
 
     finally:
         await conn.close()
@@ -126,6 +126,7 @@ async def create_account(packet):
             return { "success": 200 }
 
         except psycopg.Error as e:
+            print (e)
             return { "error": 500 }
 
     finally:
@@ -144,8 +145,9 @@ async def create_account(packet):
 #}
 
 async def guest_login(packet):
+    packet = json.loads(packet)
     version = packet["version"]
-    conn =  await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
+    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
     try:
         cursor = conn.cursor()
         
@@ -160,12 +162,15 @@ async def guest_login(packet):
         password = row[0]
 
         await cursor.execute("""
-                INSERT INTO Player (username, password, uvid, status, token) VALUES (%s, %s, %s, %s, %s)
-                """, 
-                ("", password, version, "active", token)
-            )
+            INSERT INTO Player (username, password, uvid, status, token) VALUES (%s, %s, %s, %s, %s)
+            """, 
+            ("", password, version, "online", token)
+        )
+        return { "token": str(token) }
+
     finally:
-        conn.close()
+        await conn.commit()
+        await conn.close()
 
 # Request:
 #{
@@ -179,20 +184,21 @@ async def guest_login(packet):
 #}
 
 async def logout(packet):
-    token = packet["logoout"]
-    conn = await psykcokpg.AsyncConnection.connect("dbname=draw_master user=admin")
+    packet = json.loads(packet)
+    token = packet["token"]
+    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
     try:
         cursor = conn.cursor()
         # Check if token is associated with a guest
         await cursor.execute("SELECT username FROM Player WHERE token=%s", (token,))
         row = await cursor.fetchone()
-        if row[0] != "guest":
+        if row[0] != "":
             # Set to offline remove token
             await cursor.execute("UPDATE Player SET status=%s WHERE token=%s", ("offline", None))
             return { "success": 200 }
 
         # Delete guest from database
-        await cursor.execute("DELETE FROM Player WHERE token=%s AND username=%s", (token, "guest"))
+        await cursor.execute("DELETE FROM Player WHERE token=%s", (token,))
         return { "success": 200 }
 
     finally:
