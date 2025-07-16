@@ -13,7 +13,7 @@ def main():
     while True:
         connection, address = server.accept()
 
-        request_response = threading.thread(target=handle_client, args=(connection,))
+        request_response = threading.Thread(target=handle_client, args=(connection,))
         request_response.start() 
 
 if __name__ == "__main__":

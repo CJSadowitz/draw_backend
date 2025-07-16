@@ -94,7 +94,6 @@ async def join_lobby(packet):
         # Compute next value
         full_set = set(range(1, size + 1))
         pos = min(full_set - set(active_positions))
-
         # Add player to lobby
         await cursor.execute("INSERT INTO Lobby_members ulid=%s, uuid=%s, slot_number=%s", (ulid, uuid, pos))
         return { "success": 200 }
@@ -119,7 +118,7 @@ async def join_lobby(packet):
 #   ]
 #}
 async def list_lobbies(packet):
-    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
+    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=player")
     try:
         cursor = conn.cursor()
 
@@ -139,6 +138,8 @@ async def list_lobbies(packet):
             lobbies.append({ str(host_username): get_lobby_attributes(row) })
 
         return { "success": 200, "lobbies": lobbies }
+    finally:
+        await conn.close()
             
 
 def get_lobby_attributes(row):
