@@ -1,5 +1,6 @@
 import psycopg
 import asyncio
+import json
 
 # Received:
 #{
@@ -13,12 +14,14 @@ import asyncio
 # Return:
 #{
 #   "success": 200,
-#   "lobby": { "uuid": uuid, "type": type, "version": version, "size": size }
+#   "lobby": { "ulid": ulid, "type": type, "version": version, "size": size }
 #}
 
 async def create_new_lobby(packet):
+    packet = json.loads(packet)
     size = packet["size"]
     lobby_type = packet["type"]
+    token = packet["token"]
     # Create new lobby row
     conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin") 
     try:
@@ -32,7 +35,7 @@ async def create_new_lobby(packet):
 
         # Create new lobby instance
         await cursor.execute("""
-            INSERT INTO Lobby (uvid, status, type, size) VALUES (%s, %s, %s, %s)
+            INSERT INTO Lobby (uvid, status, type, size) VALUES (%s, %s, %s, %s) RETURNING ulid
             """,
             (version, 'joinable', lobby_type, size)
         )
@@ -55,7 +58,7 @@ async def create_new_lobby(packet):
         }
 
     finally:
-        await cursor.commit()
+        await conn.commit()
         await conn.close()
 
 # Received:
@@ -69,37 +72,48 @@ async def create_new_lobby(packet):
 #{
 #   "success": 200,
 #}
+# Or:
+#{
+#   "error": 403,
+#}
 
 async def join_lobby(packet):
+    packet = json.loads(packet)
+    token = packet["token"]
     ulid = packet["ulid"]
     conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin") 
     try:
         cursor = conn.cursor()
-        # Add player to next avaliable slot in the lobby_member
+
         await cursor.execute("SELECT uuid FROM Player WHERE token=%s", (token,))
-        uuid = await cursor.fetchone()[0]
+        row = await cursor.fetchone()
+        uuid = row[0]
 
         await cursor.execute("""
-            SELECT slot_number FROM Lobby_memeber WHERE ulid=%s ORDER BY slot_number DESC""",
+            SELECT slot_number FROM Lobby_member WHERE ulid=%s ORDER BY slot_number DESC""",
             (ulid,)
         )
-        # Find and fill next numerical position
+
         active_positions = await cursor.fetchall()
         active_positions = [pos[0] for pos in active_positions]
 
-        # Get lobby size
         await cursor.execute("SELECT size FROM Lobby WHERE ulid=%s", (ulid,))
-        size = await cursor.fetchone()
+        row = await cursor.fetchone()
+        size = row[0]
+        
+        pos = None
+        try:
+            full_set = set(range(1, size + 1))
+            pos = min(full_set - set(active_positions))
+        except Exception as e:
+            # Lobby is full
+            return { "error": 403 }
 
-        # Compute next value
-        full_set = set(range(1, size + 1))
-        pos = min(full_set - set(active_positions))
-        # Add player to lobby
-        await cursor.execute("INSERT INTO Lobby_members ulid=%s, uuid=%s, slot_number=%s", (ulid, uuid, pos))
+        await cursor.execute("INSERT INTO Lobby_member (ulid, uuid, slot_number) VALUES (%s, %s, %s)", (ulid, uuid, pos))
         return { "success": 200 }
 
     finally:
-        await cursor.commit()
+        await conn.commit()
         await conn.close()
 
 # Request:
@@ -117,8 +131,10 @@ async def join_lobby(packet):
 #       "username_n": { lobby_stat: "val", ... }
 #   ]
 #}
+
 async def list_lobbies(packet):
-    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=player")
+    packet = json.loads(packet)
+    conn = await psycopg.AsyncConnection.connect("dbname=draw_master user=admin")
     try:
         cursor = conn.cursor()
 
@@ -129,13 +145,18 @@ async def list_lobbies(packet):
         lobbies = []
         for row in rows:
             # Get host
+            ulid = row[0]
             await cursor.execute("""
-                SELECT uuid FROM Lobby_member WHERE ulid=%s AND slot_number=%s""", 
-                (ulid, slot_number)
+                SELECT uuid FROM Lobby_member WHERE ulid=%s""", 
+                (ulid,)
             )
-            lobby_memeber_row = await cursor.fetchone()
-            host_username = lobby_memeber_row[0]
-            lobbies.append({ str(host_username): get_lobby_attributes(row) })
+            lobby_member_row = await cursor.fetchone()
+            if lobby_member_row != None:
+                host_username = lobby_member_row[0]
+                lobbies.append({ str(host_username): get_lobby_attributes(row) })
+            else:
+                host_username = "empty"
+                lobbies.append({ str(host_username): get_lobby_attributes(row) })
 
         return { "success": 200, "lobbies": lobbies }
     finally:
