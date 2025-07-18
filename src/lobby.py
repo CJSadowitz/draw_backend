@@ -12,7 +12,7 @@ async def host_lobby_async(conn, ulid):
         # Lobby Logic
         # Game Logic
         # Consider logging out or leaving lobby
-        print ("Yay")
+        break
         pass
 
 async def get_connections(ulid, current_connections):

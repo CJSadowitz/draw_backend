@@ -33,7 +33,7 @@ async def handle_message(conn, packet):
         message = { "error": 404, "path_not_found": path }
 
     conn.send(json.dumps(message).encode("utf-8"))
-    return "end"
+    return "end", None
 
 async def account_message(packet, path):
     sub_path = path.split('/')[1]

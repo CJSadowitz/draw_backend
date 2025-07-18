@@ -19,7 +19,7 @@ import src.global_connections
 #   "lobby": { "ulid": ulid, "type": type, "version": version, "size": size }
 #}
 
-async def create_new_lobby(conn, packet):
+async def create_new_lobby(connection, packet):
     packet = json.loads(packet)
     size = packet["size"]
     lobby_type = packet["type"]
@@ -51,7 +51,7 @@ async def create_new_lobby(conn, packet):
             """, (ulid, uuid, 0)
         )
 
-        add_connection(conn, uuid, ulid)
+        add_connection(connection, uuid, ulid)
 
         await cursor.execute("SELECT * FROM Lobby WHERE ulid=%s", (ulid,))
         row = await cursor.fetchone()
@@ -81,7 +81,7 @@ async def create_new_lobby(conn, packet):
 #   "error": 403,
 #}
 
-async def join_lobby(conn, packet):
+async def join_lobby(connection, packet):
     packet = json.loads(packet)
     token = packet["token"]
     ulid = packet["ulid"]
@@ -115,7 +115,7 @@ async def join_lobby(conn, packet):
 
         await cursor.execute("INSERT INTO Lobby_member (ulid, uuid, slot_number) VALUES (%s, %s, %s)", (ulid, uuid, pos))
         
-        add_connection(conn, uuid, ulid)
+        add_connection(connection, uuid, ulid)
 
         return { "success": 200 }
 
@@ -128,7 +128,6 @@ async def join_lobby(conn, packet):
 #   "path": "pre_lobby/list_lobbies",
 #   "token": "hash"
 #}
-
 # Return:
 #{
 #   "success": 200,
