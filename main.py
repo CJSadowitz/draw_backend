@@ -2,6 +2,17 @@ import socket
 import threading
 from src.client_handler import handle_client
 
+#{
+#   "uuid_1": { "connection": socket_connection_object,
+#             "status":     "in_lobby/waiting",
+#             "lobby":      "ulid"
+#           },
+#   "uuid_2": { "connection": socket_connection_object,
+#             "status":     "waiting",
+#             "lobby":      None
+#           }
+#}
+
 g_connections = dict()
 
 def main():

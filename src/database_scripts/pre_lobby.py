@@ -2,6 +2,8 @@ import psycopg
 import asyncio
 import json
 
+import src.global_connections
+
 # Received:
 #{
 #   "path": "pre_lobby/create_new_lobby",
@@ -17,7 +19,7 @@ import json
 #   "lobby": { "ulid": ulid, "type": type, "version": version, "size": size }
 #}
 
-async def create_new_lobby(packet):
+async def create_new_lobby(conn, packet):
     packet = json.loads(packet)
     size = packet["size"]
     lobby_type = packet["type"]
@@ -49,6 +51,8 @@ async def create_new_lobby(packet):
             """, (ulid, uuid, 0)
         )
 
+        add_connection(conn, uuid, ulid)
+
         await cursor.execute("SELECT * FROM Lobby WHERE ulid=%s", (ulid,))
         row = await cursor.fetchone()
 
@@ -77,7 +81,7 @@ async def create_new_lobby(packet):
 #   "error": 403,
 #}
 
-async def join_lobby(packet):
+async def join_lobby(conn, packet):
     packet = json.loads(packet)
     token = packet["token"]
     ulid = packet["ulid"]
@@ -110,6 +114,9 @@ async def join_lobby(packet):
             return { "error": 403 }
 
         await cursor.execute("INSERT INTO Lobby_member (ulid, uuid, slot_number) VALUES (%s, %s, %s)", (ulid, uuid, pos))
+        
+        add_connection(conn, uuid, ulid)
+
         return { "success": 200 }
 
     finally:
@@ -161,7 +168,11 @@ async def list_lobbies(packet):
         return { "success": 200, "lobbies": lobbies }
     finally:
         await conn.close()
-            
+
+
+def add_connection(conn, uuid, ulid):
+    if conn and uuid and ulid:
+        src.global_connections.connections[uuid] = { "lobby": {"ulid": ulid, "connection": conn} }
 
 def get_lobby_attributes(row):
     # [ulid, ugid, uvid, status, type, size]

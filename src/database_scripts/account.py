@@ -28,7 +28,7 @@ async def check_version(packet):
         row = await cursor.fetchall()
         for item in row:
             if version == item[0]:
-                return json.dumps({ "success": 200 })
+                return { "success": 200 }
         try:
             await cursor.execute("SELECT uvid FROM Version WHERE status=1")
             row = await cursor.fetchone()

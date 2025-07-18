@@ -10,16 +10,25 @@ async def handle_message(conn, packet):
     path = json.loads(packet)["path"]
     message = None
 
+    print ("message:", packet)
+
     if "account" in path:
         message = await account_message(packet, path)
     elif "pre_lobby" in path:
-        message = await pre_lobby_message(packet, path)
+        message = await pre_lobby_message(conn, packet, path)
+        ulid = None
+        if "ulid" in message:
+            ulid = message["ulid"]
+
+        if "lobby" in message:
+            ulid = message["lobby"]["ulid"]
+
         if path == "pre_lobby/join_lobby" and "success" in message.keys():
             conn.send(json.dumps(message).encode("utf-8"))
-            return "join_lobby"
-        if path == "pre_lobby/create_lobby" and "success" in message.keys():
+            return "join_lobby", ulid
+        if path == "pre_lobby/create_new_lobby" and "success" in message.keys():
             conn.send(json.dumps(message).encode("utf-8"))
-            return "create_lobby"
+            return "create_lobby", ulid
     else:
         message = { "error": 404, "path_not_found": path }
 
@@ -42,13 +51,13 @@ async def account_message(packet, path):
         case _:
             return { "error": 404, "path_not_found": path }
 
-async def pre_lobby_message(packet, path):
-    sub_path = path.split('/')[0]
+async def pre_lobby_message(conn, packet, path):
+    sub_path = path.split('/')[1]
     match (sub_path):
         case ("create_new_lobby"):
-            return await create_lobby(packet)
+            return await create_new_lobby(conn, packet)
         case ("join_lobby"):
-            return await join_lobby(packet)
+            return await join_lobby(conn, packet)
         case ("list_lobbies"):
             return await list_lobbies(packet)
         case _:
