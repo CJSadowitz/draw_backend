@@ -5,11 +5,8 @@ from src.database_scripts.pre_lobby import list_lobbies, create_new_lobby, join_
 import socket
 import json
 
-# Gross...
-
-# Returns a boolean for lobby state
+# Returns next state
 async def handle_message(conn, packet):
-    # parse the packet
     path = json.loads(packet)["path"]
     message = None
 
@@ -17,15 +14,17 @@ async def handle_message(conn, packet):
         message = await account_message(packet, path)
     elif "pre_lobby" in path:
         message = await pre_lobby_message(packet, path)
-        for key in message:
-            if key == "success":
-                conn.send(json.dumps(message).encode("utf-8"))
-                return True
+        if path == "pre_lobby/join_lobby" and "success" in message.keys():
+            conn.send(json.dumps(message).encode("utf-8"))
+            return "join_lobby"
+        if path == "pre_lobby/create_lobby" and "success" in message.keys():
+            conn.send(json.dumps(message).encode("utf-8"))
+            return "create_lobby"
     else:
         message = { "error": 404, "path_not_found": path }
 
     conn.send(json.dumps(message).encode("utf-8"))
-    return False
+    return "end"
 
 async def account_message(packet, path):
     sub_path = path.split('/')[1]
@@ -54,7 +53,4 @@ async def pre_lobby_message(packet, path):
             return await list_lobbies(packet)
         case _:
             return { "error": 404, "path_not_found": path }
-
-if __name__ == "__main__":
-    pass
 
