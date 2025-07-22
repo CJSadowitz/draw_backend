@@ -16,7 +16,7 @@ import src.global_connections
 # Return:
 #{
 #   "success": 200,
-#   "lobby": { "ulid": ulid, "type": type, "version": version, "size": size }
+#   "lobby": { "ulid": ulid, "type": type, "version": version, "size": size, "username", username}
 #}
 
 async def create_new_lobby(connection, packet):
@@ -51,14 +51,14 @@ async def create_new_lobby(connection, packet):
             """, (ulid, uuid, 0)
         )
 
-        add_connection(connection, uuid, ulid)
+        add_connection(connection, uuid, ulid, "hosting")
 
         await cursor.execute("SELECT * FROM Lobby WHERE ulid=%s", (ulid,))
         row = await cursor.fetchone()
 
         return {
             "success": 200,
-            str(username): get_lobby_attributes(row)
+            "lobby": get_lobby_attributes(row)
         }
 
     finally:
@@ -115,9 +115,9 @@ async def join_lobby(connection, packet):
 
         await cursor.execute("INSERT INTO Lobby_member (ulid, uuid, slot_number) VALUES (%s, %s, %s)", (ulid, uuid, pos))
         
-        add_connection(connection, uuid, ulid)
+        add_connection(connection, uuid, ulid, "waiting")
 
-        return { "success": 200 }
+        return { "success": 200, "uuid": uuid }
 
     finally:
         await conn.commit()
@@ -169,9 +169,9 @@ async def list_lobbies(packet):
         await conn.close()
 
 
-def add_connection(conn, uuid, ulid):
+def add_connection(conn, uuid, ulid, status):
     if conn and uuid and ulid:
-        src.global_connections.connections[uuid] = { "lobby": {"ulid": ulid, "connection": conn} }
+        src.global_connections.connections[uuid] = {"ulid": ulid, "connection": conn, "status": status}
 
 def get_lobby_attributes(row):
     # [ulid, ugid, uvid, status, type, size]
