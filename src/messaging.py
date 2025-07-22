@@ -17,15 +17,18 @@ async def handle_message(conn, packet):
     elif "pre_lobby" in path:
         message = await pre_lobby_message(conn, packet, path)
         ulid = None
-        if "ulid" in message:
-            ulid = message["ulid"]
+        uuid = None
 
-        if "lobby" in message:
+        if "lobby" in message.keys():
             ulid = message["lobby"]["ulid"]
+
+        if "uuid" in message.keys():
+            uuid = message["uuid"]
 
         if path == "pre_lobby/join_lobby" and "success" in message.keys():
             conn.send(json.dumps(message).encode("utf-8"))
-            return "join_lobby", ulid
+            return "join_lobby", uuid
+
         if path == "pre_lobby/create_new_lobby" and "success" in message.keys():
             conn.send(json.dumps(message).encode("utf-8"))
             return "create_lobby", ulid
